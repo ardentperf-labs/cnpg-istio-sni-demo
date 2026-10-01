@@ -5,7 +5,7 @@ and routes by SNI; PostgreSQL 16 receives **plaintext** and authenticates with
 SCRAM passwords.
 
 ```mermaid
-flowchart LR
+flowchart TD
   C["psql 17+ · TLS"] --> G["Istio · localhost:15432"]
   G -->|"a.db.test · plaintext"| A["CNPG pg16-a"]
   G -->|"b.db.test · plaintext"| B["CNPG pg16-b"]
