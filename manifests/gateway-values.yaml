@@ -1,0 +1,15 @@
+labels:
+  istio: ingressgateway
+autoscaling:
+  enabled: false
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+service:
+  type: NodePort
+  ports:
+    - name: tls-postgres
+      port: 5432
+      targetPort: 5432
+      nodePort: 30432

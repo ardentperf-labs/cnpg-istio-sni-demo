@@ -1,0 +1,110 @@
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: postgres-a
+  namespace: databases
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 5432
+        name: tls-postgres-a
+        protocol: TLS
+      tls:
+        mode: SIMPLE
+        credentialName: postgres-a-tls
+      hosts:
+        - a.db.test
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: postgres-a
+  namespace: databases
+spec:
+  hosts:
+    - a.db.test
+  gateways:
+    - postgres-a
+  tcp:
+    - route:
+        - destination:
+            host: pg-a-rw.databases.svc.cluster.local
+            port:
+              number: 5432
+---
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: postgres-b
+  namespace: databases
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 5432
+        name: tls-postgres-b
+        protocol: TLS
+      tls:
+        mode: SIMPLE
+        credentialName: postgres-b-tls
+      hosts:
+        - b.db.test
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: postgres-b
+  namespace: databases
+spec:
+  hosts:
+    - b.db.test
+  gateways:
+    - postgres-b
+  tcp:
+    - route:
+        - destination:
+            host: pg-b-rw.databases.svc.cluster.local
+            port:
+              number: 5432
+---
+# Backend application connections are plaintext, without mesh TLS.
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: postgres
+  namespace: databases
+spec:
+  host: '*.databases.svc.cluster.local'
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+---
+# Istio 1.30 has no Gateway alpnProtocols field. Direct-TLS libpq requires
+# the terminating proxy to select the PostgreSQL ALPN protocol.
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: postgres-alpn
+  namespace: istio-system
+spec:
+  workloadSelector:
+    labels:
+      istio: ingressgateway
+  configPatches:
+    - applyTo: FILTER_CHAIN
+      match:
+        context: GATEWAY
+        listener:
+          portNumber: 5432
+      patch:
+        operation: MERGE
+        value:
+          transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+              common_tls_context:
+                alpn_protocols: [postgresql]
