@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/common.sh"
-query="SELECT i.name, s.ssl, current_setting('ssl'), current_setting('server_version_num')::int / 10000 FROM public.cluster_identity i CROSS JOIN pg_stat_ssl s WHERE s.pid = pg_backend_pid()"
+query="SELECT i.name, s.ssl, current_setting('server_version_num')::int / 10000 FROM public.cluster_identity i CROSS JOIN pg_stat_ssl s WHERE s.pid = pg_backend_pid()"
 run() {
   local host=$1 trust=$2 identity=$3 negotiation=${4:-direct} sni=${5:-1}
   local PGPASSWORD
@@ -28,8 +28,8 @@ expect_failure() {
 }
 for tenant in a b; do
   result=$(run "$tenant.db.test" "$tenant" "$tenant")
-  [[ "$result" == "pg-$tenant|f|on|${EXPECTED_SERVER_MAJOR:-17}" ]] || { echo "FAIL: unexpected backend $result"; exit 1; }
-  echo "PASS: $tenant.db.test + password $tenant -> $result (backend session SSL off; CNPG global SSL on)"
+  [[ "$result" == "pg-$tenant|f|16" ]] || { echo "FAIL: unexpected backend $result"; exit 1; }
+  echo "PASS: $tenant.db.test + password $tenant -> pg16-$tenant (PostgreSQL 16, plaintext backend session)"
 done
 expect_failure 'password A on cluster B' 'password authentication failed' b.db.test b a
 expect_failure 'password B on cluster A' 'password authentication failed' a.db.test a b

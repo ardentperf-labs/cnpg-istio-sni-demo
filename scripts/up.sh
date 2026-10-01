@@ -35,7 +35,7 @@ for tenant in a b; do
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: pg-$tenant
+  name: pg16-$tenant
   namespace: databases
 spec:
   instances: 1
@@ -65,12 +65,8 @@ spec:
 YAML
 done
 "$ROOT/scripts/gateway-certs.sh"
-# Remove the previous passthrough configuration when upgrading this demo.
-kubectl -n databases delete gateway postgres --ignore-not-found
-kubectl -n databases delete virtualservice postgres --ignore-not-found
 kubectl apply -f "$ROOT/manifests/routing.yaml"
 for tenant in a b; do
-  kubectl -n databases wait --for=condition=Ready "cluster/pg-$tenant" --timeout=600s
-
+  kubectl -n databases wait --for=condition=Ready "cluster/pg16-$tenant" --timeout=600s
 done
 echo 'Ready: ./scripts/verify.sh'
